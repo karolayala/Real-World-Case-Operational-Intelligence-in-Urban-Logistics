@@ -1,17 +1,22 @@
-1. Model Failure: Your model underestimates delivery time on rainy days. Do you fix the model, the data, or the business expectations?
+## 1. Model Failure: Your model underestimates delivery time on rainy days. Do you fix the model, the data, or the business expectations?
 
 Observaría por qué el modelo subestima en esos casos:
 - Si es porque se tienen pocos datos de días lluviosos, lo mejor sería aumentar la cantidad de datos reales y balancear los niveles de la variable clima; si no es posile porque no hay más datos reales, haría un bootstrap con reemplazo para simular registros con dias lluviosos.
+  
 - Si claramente los datos explican un efecto sobre los tiempos de entrega en días lluviosos y suponiendo que hay datos suficientes para asegurar los efectos, arreglaría el modelo agregando interaccionesy utilizando algoritmos de selección de variables o efectos.
+  
 - Las expectativas de negocio solo las cambiaría si he probado todas las alternativas posibles. Si ha pasado eso, daría resultados en rangos para dar una idea de lo que puede suceder en días lluviosos sin fijar un solo valor estimado.
 
-2. Transferability: The model performs well in Mumbai. It’s now being deployed in São Paulo. How do you ensure generalization?
+## 2. Transferability: The model performs well in Mumbai. It’s now being deployed in São Paulo. How do you ensure generalization?
+
 - Realizo pruebas estadísticas de comparación de grupos en todas las variables entre las dos ciudades: medias, proporciones, distribuciones. Para poder asegurar un buen rendimiento en la nueva ciudad, los datos de ajuste del modelo deben tener los mismos patrones que la ciudad original.
+  
 - Si tengo un conjunto de datos de São Paulo, utilizo el modelo para predecir los tiempos de entrega allí y comparo las predicciones con los datos reales utilizando distintas metricas de evaluación. Así, me aseguro de que las metricas tengan un comportamiento similar a las metricas de evaluación de la ciudad original.
+  
 - Si tengo la opción de reentrenar el modelo con datos de São Paulo, lo hago y evaluo si ese modelo si sirve para la nueva ciudad de acuerdo a sus metricas.
 
 
-3. GenAI Disclosure: Generative AI tools are a great resource that can facilitate development, what parts of this project did you use GenAI tools for? How did you validate or modify their output?
+## 3. GenAI Disclosure: Generative AI tools are a great resource that can facilitate development, what parts of this project did you use GenAI tools for? How did you validate or modify their output?
 - Use IA para generar codigo python de graficos y algunas pruebas estadísticas, así como para crear funciones que me evitaran la repetición de código, en las fases de exploración y entrenamiento de modelos.
 - Una vez seleccionado el modelo, use IA para construir la carpeta model_pipeline donde se simula su ejecución en producción. Sin embargo, todo lo relacionado con el proceso de exploración, entrenamiento y comparación de modelos tiene su notebook en la carpeta notebooks, donde realizo a fondo exploraciones.
 - Use IA para generar los endpoint con FastAPI y el formulario web que brinda una mejor experiencia al usuario para el uso de estos.
