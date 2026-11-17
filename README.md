@@ -30,6 +30,8 @@ Delivery_Time_min ~ Distance_km + Preparation_Time_min + Traffic_Level + Weather
 | [`model_notes.md`](model_notes.md) | Lógica de modelado, elección de la métrica, selección de variables y ajuste de hiperparámetros |
 | [`explainability.md`](explainability.md) | Efecto de cada variable en minutos, importancia (SHAP) y cómo se explica cada predicción |
 | [`error_insights.md`](error_insights.md) | Cuándo y por qué falla el modelo: sesgo, error por segmento y peores casos |
+| [`next_steps.md`](next_steps.md) | Cómo funciona la API (endpoints, entradas, respuestas, errores) y qué falta para producción |
+| [`strategic_reflections.md`](strategic_reflections.md) | Respuestas a las preguntas estratégicas de la prueba |
 
 ---
 
@@ -42,6 +44,8 @@ Delivery_Time_min ~ Distance_km + Preparation_Time_min + Traffic_Level + Weather
 ├── model_notes.md             ← informe de modelado
 ├── explainability.md          ← informe de explicabilidad
 ├── error_insights.md          ← informe de errores del modelo
+├── next_steps.md              ← la API explicada y próximos pasos hacia producción
+├── strategic_reflections.md   ← reflexiones estratégicas
 ├── requirements.txt           ← dependencias con versiones fijas (Python 3.13)
 ├── pytest.ini                 ← configuración de las pruebas
 ├── .gitignore
@@ -89,13 +93,24 @@ y tanto la API como el notebook `predictive_model.ipynb` importan de ahí: **una
 
 ## Instalación
 
-Requiere **Python 3.13**. Desde la raíz del repositorio:
+Requiere **Python 3.13** y Git.
 
 ```bash
+git clone https://github.com/karolayala/Real-World-Case-Operational-Intelligence-in-Urban-Logistics.git
+cd Real-World-Case-Operational-Intelligence-in-Urban-Logistics
+
 python -m venv env
 # Windows:       env\Scripts\activate
 # macOS / Linux: source env/bin/activate
 pip install -r requirements.txt
+```
+
+### Inicio rápido
+
+```bash
+python -m pytest                        # 1. verifica que todo funciona (40 pruebas)
+python -m model_pipeline.run_pipeline   # 2. entrena el modelo y lo guarda en artifacts/
+uvicorn api.main:app --reload           # 3. levanta la API y abre http://127.0.0.1:8000/
 ```
 
 ## Uso
@@ -154,6 +169,8 @@ Si `artifacts/` no existe (por ejemplo, recién clonado el repositorio), la API 
 | `POST` | `/predict/batch` | Lista de pedidos (hasta 10 000), cada uno con `id` opcional |
 | `GET` | `/health` | Estado del servicio, fórmula y métricas del modelo |
 | `GET` | `/opciones` | Categorías válidas y rangos de entrenamiento |
+
+La explicación detallada de cada endpoint, con ejemplos de entrada, respuesta y errores, está en [`next_steps.md`](next_steps.md).
 
 Ejemplo:
 
