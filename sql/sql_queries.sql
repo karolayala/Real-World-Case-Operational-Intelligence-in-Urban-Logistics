@@ -16,7 +16,7 @@ SELECT DV.RESTAURANT_AREA,
  LEFT JOIN RESTAURANTS RTR ON RTR.RESTAURANT_ID = ORD.RESTAURANT_ID
  WHERE DV.TRAFFIC_CONDITION IS NOT NULL
  GROUP BY DV.RESTAURANT_AREA, RTR.CUISINE_TYPE, DV.TRAFFIC_CONDITION
- ORDER BY AVG_DELIVERY_TIME DESC
+ ORDER BY AVG_DELIVERY_TIME DESC;
 
 -- 3. Top 10 delivery people with the fastest average delivery time, considering only those with at least 50 deliveries 
 -- and who are still active.
@@ -30,7 +30,7 @@ WHERE dvp.is_active = 1
 GROUP BY dv.delivery_person_id, dvp.name
 HAVING COUNT(*) >= 50
 ORDER BY AVG(dv.delivery_time_min) ASC
-LIMIT 10
+LIMIT 10;
 
 -- 4. The most profitable restaurant area in the last 3 months, defined as the area with the highest total order value.
 SELECT dv.restaurant_area, SUM(ord.order_value) AS Total_order_value
@@ -39,7 +39,7 @@ LEFT JOIN orders ord ON dv.delivery_id = ord.delivery_id
 WHERE dv.order_placed_at >=  (SELECT DATETIME(MAX(order_placed_at), '-3 months') FROM deliveries )
 GROUP BY dv.restaurant_area
 ORDER BY SUM(ord.order_value) DESC
-LIMIT 1
+LIMIT 1;
 
 -- 5. Identify whether any delivery people show an increasing trend in average delivery time.
 WITH entregas_person AS (
@@ -82,4 +82,4 @@ FROM pendientes p
 INNER JOIN delivery_persons dvp
     ON dvp.delivery_person_id = p.delivery_person_id
 WHERE p.n >= 30 AND p.pendiente_min_mes >  1
-ORDER BY p.pendiente_min_mes DESC
+ORDER BY p.pendiente_min_mes DESC;
