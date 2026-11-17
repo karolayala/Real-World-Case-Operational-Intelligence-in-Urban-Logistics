@@ -1,0 +1,948 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tiempo de entrega</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🛵</text></svg>">
+<style>
+  :root {
+    color-scheme: light;
+    --page: #f3f4f1; --surface: #fcfcfb; --raised: #ffffff;
+    --ink: #0b0b0b; --ink-2: #52514e; --muted: #898781;
+    --grid: #e1e0d9; --axis: #c3c2b7; --border: rgba(11,11,11,0.10);
+    --s1: #2a78d6; --s2: #eb6834; --s3: #1baf7a;
+    --plus: #e34948; --minus: #2a78d6;
+    --band: #86b6ef; --track: #e7eefa;
+    --warning: #fab219; --warn-bg: #fff4dc; --warn-ink: #6b4500;
+    --good-ink: #006300; --critical: #d03b3b;
+    --hero-a: #2a78d6; --hero-b: #6250d6;
+    --shadow: 0 1px 2px rgba(11,11,11,.04), 0 8px 24px rgba(11,11,11,.06);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:where(:not([data-theme="light"])) {
+      color-scheme: dark;
+      --page: #0d0d0d; --surface: #1a1a19; --raised: #222220;
+      --ink: #f0efec; --ink-2: #c3c2b7; --muted: #898781;
+      --grid: #2c2c2a; --axis: #383835; --border: rgba(255,255,255,0.10);
+      --s1: #3987e5; --s2: #d95926; --s3: #199e70;
+      --plus: #e66767; --minus: #3987e5;
+      --band: #256abf; --track: #22303f;
+      --warning: #fab219; --warn-bg: #3a2c12; --warn-ink: #f3c77a;
+      --good-ink: #0ca30c; --critical: #e66767;
+      --hero-a: #184f95; --hero-b: #3b2f8a;
+      --shadow: 0 1px 2px rgba(0,0,0,.3), 0 8px 24px rgba(0,0,0,.35);
+    }
+  }
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --page: #0d0d0d; --surface: #1a1a19; --raised: #222220;
+    --ink: #f0efec; --ink-2: #c3c2b7; --muted: #898781;
+    --grid: #2c2c2a; --axis: #383835; --border: rgba(255,255,255,0.10);
+    --s1: #3987e5; --s2: #d95926; --s3: #199e70;
+    --plus: #e66767; --minus: #3987e5;
+    --band: #256abf; --track: #22303f;
+    --warning: #fab219; --warn-bg: #3a2c12; --warn-ink: #f3c77a;
+    --good-ink: #0ca30c; --critical: #e66767;
+    --hero-a: #184f95; --hero-b: #3b2f8a;
+    --shadow: 0 1px 2px rgba(0,0,0,.3), 0 8px 24px rgba(0,0,0,.35);
+  }
+
+  * { box-sizing: border-box; }
+  html, body { margin: 0; }
+  body { background: var(--page); color: var(--ink);
+         font: 15px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+  button, input, select { font: inherit; color: inherit; }
+  .wrap { max-width: 1180px; margin: 0 auto; padding: 0 16px; }
+
+  /* ---------- Cabecera ---------- */
+  header.hero { background: linear-gradient(120deg, var(--hero-a), var(--hero-b)); color: #fff;
+                padding: 28px 0 76px; position: relative; overflow: hidden; }
+  header.hero::after { content: ""; position: absolute; inset: auto -10% -60px -10%; height: 120px;
+                       background: radial-gradient(60% 100% at 50% 0, rgba(255,255,255,.18), transparent 70%); }
+  .top { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+  .marca { display: flex; align-items: center; gap: 10px; font-weight: 700; letter-spacing: .2px; }
+  .marca .logo { width: 34px; height: 34px; border-radius: 10px; display: grid; place-items: center;
+                 background: rgba(255,255,255,.18); font-size: 18px; }
+  .tema { background: rgba(255,255,255,.16); border: 1px solid rgba(255,255,255,.28); color: #fff;
+          border-radius: 999px; padding: 6px 12px; cursor: pointer; }
+  .hero h1 { font-size: clamp(1.7rem, 3.6vw, 2.6rem); line-height: 1.15; margin: 22px 0 8px; max-width: 720px; }
+  .hero p { margin: 0; opacity: .9; max-width: 640px; }
+  .chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 18px; }
+  .chip { background: rgba(255,255,255,.16); border: 1px solid rgba(255,255,255,.24);
+          border-radius: 999px; padding: 4px 12px; font-size: .85rem; }
+  .chip b { font-weight: 700; }
+
+  /* ---------- Pestañas ---------- */
+  .tabs { display: inline-flex; gap: 4px; padding: 4px; background: var(--surface); border-radius: 12px;
+          box-shadow: var(--shadow); margin-top: -26px; position: relative; z-index: 1; }
+  .tab { border: 0; background: transparent; padding: 10px 18px; border-radius: 9px; cursor: pointer;
+         color: var(--ink-2); font-weight: 600; }
+  .tab[aria-selected="true"] { background: var(--s1); color: #fff; }
+  .panel { display: none; padding: 20px 0 48px; }
+  .panel.activo { display: block; }
+
+  /* ---------- Tarjetas ---------- */
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: 16px;
+          box-shadow: var(--shadow); padding: 20px; min-width: 0; }
+  .card h2 { font-size: 1.05rem; margin: 0 0 2px; }
+  .card .sub { color: var(--ink-2); font-size: .875rem; margin: 0 0 14px; }
+  .grid-uno { display: grid; grid-template-columns: minmax(300px, 400px) minmax(0, 1fr); gap: 20px; align-items: start; }
+  .col { display: grid; gap: 20px; min-width: 0; }
+  @media (max-width: 880px) { .grid-uno { grid-template-columns: 1fr; } }
+
+  /* ---------- Controles del pedido ---------- */
+  .campo { margin-bottom: 16px; }
+  .campo-cab { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; margin-bottom: 6px; }
+  .campo-cab label, .campo-cab span.nom { font-weight: 600; font-size: .9rem; }
+  .nota { color: var(--muted); font-size: .75rem; }
+  .num-fila { display: flex; gap: 10px; align-items: center; }
+  input[type="range"] { flex: 1; accent-color: var(--s1); }
+  input[type="number"], select, .celda input { background: var(--raised); border: 1px solid var(--border);
+          border-radius: 8px; padding: 6px 8px; min-width: 0; }
+  .num-fila input[type="number"] { width: 84px; }
+  .pills { display: flex; flex-wrap: wrap; gap: 6px; }
+  .pill { border: 1px solid var(--border); background: var(--raised); border-radius: 999px;
+          padding: 5px 11px; cursor: pointer; font-size: .85rem; color: var(--ink-2); }
+  .pill[aria-pressed="true"] { background: var(--s1); border-color: var(--s1); color: #fff; }
+  .pill .ic { margin-right: 4px; }
+  .sin-efecto { opacity: .62; }
+
+  /* ---------- Resultado principal ---------- */
+  .resultado-cab { display: flex; flex-wrap: wrap; gap: 8px 24px; align-items: flex-end; justify-content: space-between; }
+  .etiqueta { color: var(--ink-2); font-size: .85rem; margin: 0; }
+  .hero-num { font-size: clamp(3rem, 7vw, 4.4rem); font-weight: 700; line-height: 1; margin: 4px 0 0; letter-spacing: -1px; }
+  .hero-num small { font-size: .35em; font-weight: 600; color: var(--ink-2); letter-spacing: 0; margin-left: 4px; }
+  .rango { color: var(--ink-2); margin: 6px 0 0; }
+  .alertas { margin-top: 14px; padding: 10px 14px; border-radius: 10px; background: var(--warn-bg);
+             color: var(--warn-ink); font-size: .875rem; }
+  .alertas ul { margin: 4px 0 0; padding-left: 20px; }
+  .icono-aviso { display: inline-grid; place-items: center; width: 18px; height: 18px; border-radius: 50%;
+                 background: var(--warning); color: #0b0b0b; font-size: .7rem; font-weight: 800; margin-right: 6px; }
+  .error { color: var(--critical); }
+
+  /* ---------- Gráficos ---------- */
+  .viz { width: 100%; position: relative; }
+  .viz svg { display: block; width: 100%; overflow: visible; }
+  .viz text { font-size: 12px; fill: var(--muted); }
+  .viz .t-ink { fill: var(--ink); }
+  .viz .t-ink2 { fill: var(--ink-2); }
+  .leyenda { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: .8rem; color: var(--ink-2); margin: 0 0 8px; }
+  .leyenda span { display: inline-flex; align-items: center; gap: 6px; }
+  .leyenda i { width: 12px; height: 12px; border-radius: 3px; display: inline-block; }
+  .leyenda i.linea { height: 2px; width: 16px; border-radius: 2px; }
+  #tt { position: fixed; pointer-events: none; z-index: 50; background: var(--raised); color: var(--ink);
+        border: 1px solid var(--border); border-radius: 10px; box-shadow: var(--shadow);
+        padding: 8px 10px; font-size: .8rem; line-height: 1.4; opacity: 0; transition: opacity .12s; max-width: 260px; }
+  #tt b { font-weight: 700; }
+  #tt .fila-tt { display: flex; align-items: center; gap: 6px; }
+  #tt .sw { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
+  .moto { transition: transform .6s cubic-bezier(.2,.8,.2,1); }
+  .banda { transition: x .6s cubic-bezier(.2,.8,.2,1), width .6s cubic-bezier(.2,.8,.2,1); }
+
+  /* ---------- Varios pedidos ---------- */
+  .barra { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+  .btn { border: 1px solid var(--border); background: var(--raised); border-radius: 10px; padding: 8px 14px;
+         cursor: pointer; font-weight: 600; color: var(--ink); }
+  .btn:hover { border-color: var(--s1); }
+  .btn.primario { background: var(--s1); border-color: var(--s1); color: #fff; }
+  .btn:disabled { opacity: .55; cursor: wait; }
+  .soltar { display: block; border: 2px dashed var(--axis); border-radius: 14px; padding: 22px; text-align: center;
+            color: var(--ink-2); margin: 14px 0; transition: background .15s, border-color .15s; cursor: pointer; }
+  .soltar.encima { border-color: var(--s1); background: color-mix(in srgb, var(--s1) 8%, transparent); }
+  .soltar b { color: var(--ink); }
+  .tabla-wrap { overflow-x: auto; border: 1px solid var(--border); border-radius: 12px; }
+  table { border-collapse: collapse; width: 100%; font-size: .85rem; }
+  th, td { padding: 6px 8px; text-align: left; border-bottom: 1px solid var(--grid); white-space: nowrap; }
+  th { color: var(--ink-2); font-weight: 600; background: var(--raised); position: sticky; top: 0; }
+  td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
+  .celda input { width: 86px; }
+  .celda select { padding: 5px 6px; }
+  .celda input.id { width: 90px; }
+  .mini { border: 0; background: transparent; cursor: pointer; color: var(--muted); padding: 2px 6px; border-radius: 6px; }
+  .mini:hover { color: var(--ink); background: var(--grid); }
+  .tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; margin: 18px 0; }
+  .tile { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 14px 16px; box-shadow: var(--shadow); }
+  .tile .lab { color: var(--ink-2); font-size: .8rem; margin: 0; }
+  .tile .val { font-size: 1.7rem; font-weight: 700; margin: 2px 0 0; }
+  .tile .det { color: var(--muted); font-size: .75rem; margin: 2px 0 0; }
+  .grid-dos { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 460px), 1fr)); gap: 20px; margin-bottom: 20px; }
+  .vacio { color: var(--muted); text-align: center; padding: 30px 10px; }
+  .badge { display: inline-flex; align-items: center; gap: 4px; background: var(--warn-bg); color: var(--warn-ink);
+           border-radius: 999px; padding: 1px 8px; font-size: .75rem; }
+  footer { color: var(--muted); font-size: .8rem; text-align: center; padding: 0 0 32px; }
+</style>
+</head>
+<body>
+
+<header class="hero">
+  <div class="wrap">
+    <div class="top">
+      <div class="marca"><span class="logo" aria-hidden="true">🛵</span> Estimador de entregas</div>
+      <button class="tema" id="tema" type="button" aria-label="Cambiar tema">◐ Tema</button>
+    </div>
+    <h1>¿Cuánto va a tardar tu pedido?</h1>
+    <p>Mueve los controles y mira cómo cambia el tiempo estimado en vivo, o sube un archivo con muchos pedidos a la vez.</p>
+    <div class="chips" id="chips"></div>
+  </div>
+</header>
+
+<main class="wrap">
+  <div class="tabs" role="tablist">
+    <button class="tab" role="tab" aria-selected="true" data-panel="p-uno">Un pedido</button>
+    <button class="tab" role="tab" aria-selected="false" data-panel="p-lote">Varios pedidos</button>
+  </div>
+
+  <!-- ===================== UN PEDIDO ===================== -->
+  <section class="panel activo" id="p-uno" role="tabpanel">
+    <div class="grid-uno">
+      <div class="card">
+        <h2>Detalles del pedido</h2>
+        <p class="sub">La estimación se actualiza sola al cambiar cualquier dato.</p>
+        <div id="controles"></div>
+      </div>
+
+      <div class="col">
+        <div class="card">
+          <div class="resultado-cab">
+            <div>
+              <p class="etiqueta">Tiempo estimado de entrega</p>
+              <p class="hero-num" id="hero-num">–<small>min</small></p>
+              <p class="rango" id="hero-rango">&nbsp;</p>
+            </div>
+          </div>
+          <div class="viz" id="viz-pista" style="margin-top:14px"></div>
+          <div id="alertas-uno"></div>
+        </div>
+
+        <div class="card">
+          <h2>¿Qué hace que tarde más o menos?</h2>
+          <p class="sub" id="sub-contrib">Cada factor suma o resta minutos a la base del modelo.</p>
+          <div class="leyenda">
+            <span><i style="background:var(--plus)"></i>Suma tiempo</span>
+            <span><i style="background:var(--minus)"></i>Resta tiempo</span>
+          </div>
+          <div class="viz" id="viz-contrib"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card" style="margin-top:20px">
+      <h2>¿Y si cambia la distancia o el tráfico?</h2>
+      <p class="sub">Tiempo estimado según la distancia, para cada nivel de tráfico, con el resto de datos de tu pedido.</p>
+      <div class="leyenda" id="ley-sens"></div>
+      <div class="viz" id="viz-sens"></div>
+    </div>
+  </section>
+
+  <!-- ===================== VARIOS PEDIDOS ===================== -->
+  <section class="panel" id="p-lote" role="tabpanel">
+    <div class="card">
+      <h2>Tus pedidos</h2>
+      <p class="sub">Súbelos en un archivo CSV o agrégalos a mano. Las celdas vacías se imputan con la mediana o la moda.</p>
+      <div class="barra">
+        <button class="btn" id="b-agregar" type="button">＋ Agregar fila</button>
+        <button class="btn" id="b-aleatorios" type="button">🎲 5 pedidos al azar</button>
+        <button class="btn" id="b-plantilla" type="button">⬇ Plantilla CSV</button>
+        <button class="btn" id="b-limpiar" type="button">Limpiar</button>
+        <span style="flex:1"></span>
+        <button class="btn primario" id="b-estimar" type="button">Estimar todos</button>
+      </div>
+      <label class="soltar" id="soltar">
+        <input type="file" id="archivo" accept=".csv,text/csv" hidden>
+        <b>Arrastra aquí un archivo CSV</b> o haz clic para elegirlo.<br>
+        <span class="nota">Columnas: id, Distance_km, Preparation_Time_min, Courier_Experience_yrs, Weather, Traffic_Level, Time_of_Day, Vehicle_Type.
+        Si incluye Delivery_Time_min, se compara con el tiempo real.</span>
+      </label>
+      <div id="estado-lote" class="nota" style="margin-bottom:8px"></div>
+      <div class="tabla-wrap" style="max-height:420px"><table id="tabla-entrada"></table></div>
+    </div>
+
+    <div id="res-lote"></div>
+  </section>
+</main>
+
+<footer>Prototipo · modelo de regresión lineal (OLS) · <a href="/docs" style="color:inherit">documentación de la API</a></footer>
+<div id="tt" role="tooltip"></div>
+
+<script>
+/* =========================================================
+   Datos y utilidades
+   ========================================================= */
+const NUMERICAS = ["Distance_km", "Preparation_Time_min", "Courier_Experience_yrs"];
+const CATEGORICAS = ["Weather", "Traffic_Level", "Time_of_Day", "Vehicle_Type"];
+const CAMPOS = [...NUMERICAS, ...CATEGORICAS];
+const NOMBRE = {
+  Distance_km: "Distancia", Preparation_Time_min: "Preparación", Courier_Experience_yrs: "Experiencia",
+  Weather: "Clima", Traffic_Level: "Tráfico", Time_of_Day: "Momento del día", Vehicle_Type: "Vehículo",
+};
+const UNIDAD = { Distance_km: "km", Preparation_Time_min: "min", Courier_Experience_yrs: "años" };
+const PASO = { Distance_km: 0.1, Preparation_Time_min: 1, Courier_Experience_yrs: 1 };
+const ES = {
+  Clear: "Despejado", Foggy: "Niebla", Rainy: "Lluvia", Snowy: "Nieve", Windy: "Viento",
+  Low: "Bajo", Medium: "Medio", High: "Alto",
+  Morning: "Mañana", Afternoon: "Tarde", Evening: "Atardecer", Night: "Noche",
+  Bike: "Bicicleta", Scooter: "Scooter", Car: "Carro",
+};
+const ICONO = { Clear: "☀️", Foggy: "🌫️", Rainy: "🌧️", Snowy: "❄️", Windy: "💨",
+  Morning: "🌅", Afternoon: "🏙️", Evening: "🌇", Night: "🌙", Bike: "🚲", Scooter: "🛵", Car: "🚗" };
+const ORDEN = { Traffic_Level: ["Low", "Medium", "High"], Time_of_Day: ["Morning", "Afternoon", "Evening", "Night"],
+  Vehicle_Type: ["Bike", "Scooter", "Car"] };
+const COLOR_TRAFICO = { Low: "var(--s1)", Medium: "var(--s2)", High: "var(--s3)" };
+const INICIAL = { Distance_km: 7.5, Preparation_Time_min: 15, Courier_Experience_yrs: 3,
+  Weather: "Rainy", Traffic_Level: "High", Time_of_Day: "Evening", Vehicle_Type: "Bike" };
+
+const estado = { opciones: null, pedido: { ...INICIAL }, filas: [], resultados: [], heroValor: 0 };
+const $ = (s) => document.querySelector(s);
+const NS = "http://www.w3.org/2000/svg";
+const fmt = (v, d = 1) => Number(v).toLocaleString("es", { minimumFractionDigits: d, maximumFractionDigits: d });
+const es = (v) => ES[v] ?? v;
+const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+
+function svg(tag, attrs = {}, padre) {
+  const e = document.createElementNS(NS, tag);
+  for (const [k, v] of Object.entries(attrs)) {
+    if (k === "style") e.style.cssText = v; else if (k === "text") e.textContent = v; else e.setAttribute(k, v);
+  }
+  if (padre) padre.appendChild(e);
+  return e;
+}
+function lienzo(contenedor, alto) {
+  contenedor.innerHTML = "";
+  const ancho = Math.max(280, contenedor.clientWidth);
+  const s = svg("svg", { viewBox: `0 0 ${ancho} ${alto}`, height: alto, role: "img" }, contenedor);
+  return { s, ancho, alto };
+}
+function escala(d0, d1, r0, r1) {
+  const f = (v) => r0 + ((v - d0) / ((d1 - d0) || 1)) * (r1 - r0);
+  f.inv = (p) => d0 + ((p - r0) / ((r1 - r0) || 1)) * (d1 - d0);
+  return f;
+}
+function marcas(min, max, n = 5) {
+  const paso0 = (max - min || 1) / n, mag = 10 ** Math.floor(Math.log10(paso0)), err = paso0 / mag;
+  const paso = (err >= 7.5 ? 10 : err >= 3.5 ? 5 : err >= 1.5 ? 2 : 1) * mag;
+  const t = [];
+  for (let v = Math.ceil(min / paso) * paso; v <= max + 1e-9; v += paso) t.push(+v.toFixed(10));
+  return t;
+}
+// Barra horizontal: base cuadrada en x0, extremo redondeado (4px) en x1
+function barraH(x0, x1, y, h, r = 4) {
+  const len = Math.abs(x1 - x0); if (len < 0.5) return "";
+  r = Math.min(r, len, h / 2); const d = x1 >= x0 ? 1 : -1;
+  return `M${x0},${y} H${x1 - d * r} Q${x1},${y} ${x1},${y + r} V${y + h - r} Q${x1},${y + h} ${x1 - d * r},${y + h} H${x0} Z`;
+}
+// Columna: base cuadrada abajo (y0), tope redondeado (4px) en y1
+function columna(x, w, y0, y1, r = 4) {
+  const h = y0 - y1; if (h < 0.5) return "";
+  r = Math.min(r, h, w / 2);
+  return `M${x},${y0} V${y1 + r} Q${x},${y1} ${x + r},${y1} H${x + w - r} Q${x + w},${y1} ${x + w},${y1 + r} V${y0} Z`;
+}
+
+/* ---------- Tooltip ---------- */
+const tt = $("#tt");
+function mostrarTT(html, ev) {
+  tt.innerHTML = html; tt.style.opacity = 1;
+  const r = tt.getBoundingClientRect();
+  let x = ev.clientX + 14, y = ev.clientY + 14;
+  if (x + r.width > innerWidth - 8) x = ev.clientX - r.width - 14;
+  if (y + r.height > innerHeight - 8) y = ev.clientY - r.height - 14;
+  tt.style.left = x + "px"; tt.style.top = y + "px";
+}
+const ocultarTT = () => { tt.style.opacity = 0; };
+
+/* ---------- API ---------- */
+async function api(ruta, cuerpo) {
+  const r = await fetch(ruta, cuerpo === undefined ? {} :
+    { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(cuerpo) });
+  const datos = await r.json();
+  if (!r.ok) {
+    const det = Array.isArray(datos.detail)
+      ? datos.detail.map((d) => `${NOMBRE[d.loc.at(-1)] ?? d.loc.at(-1)}: ${d.msg}`).join(" · ") : datos.detail;
+    throw new Error(det);
+  }
+  return datos;
+}
+
+/* =========================================================
+   UN PEDIDO
+   ========================================================= */
+function construirControles() {
+  const { categorias, rangos, variables_usadas } = estado.opciones;
+  const cont = $("#controles");
+  cont.innerHTML = "";
+  for (const c of NUMERICAS) {
+    const [lo, hi] = rangos[c];
+    const max = Math.ceil(hi * 1.25);
+    const usada = variables_usadas.includes(c);
+    const div = document.createElement("div");
+    div.className = "campo" + (usada ? "" : " sin-efecto");
+    div.innerHTML = `
+      <div class="campo-cab"><label for="r-${c}">${NOMBRE[c]} <span class="nota">(${UNIDAD[c]})</span></label>
+        <span class="nota">${usada ? `entrenado entre ${lo} y ${hi}` : "no influye en el modelo"}</span></div>
+      <div class="num-fila">
+        <input type="range" id="r-${c}" min="0" max="${max}" step="${PASO[c]}" value="${estado.pedido[c]}">
+        <input type="number" id="n-${c}" min="0" step="${PASO[c]}" value="${estado.pedido[c]}" aria-label="${NOMBRE[c]}">
+      </div>`;
+    cont.appendChild(div);
+    const r = div.querySelector("input[type=range]"), n = div.querySelector("input[type=number]");
+    r.addEventListener("input", () => { n.value = r.value; estado.pedido[c] = +r.value; programarPrediccion(); });
+    n.addEventListener("input", () => {
+      estado.pedido[c] = n.value === "" ? null : +n.value;
+      if (n.value !== "") r.value = n.value;
+      programarPrediccion();
+    });
+  }
+  for (const c of CATEGORICAS) {
+    const niveles = ORDEN[c] ? ORDEN[c].filter((v) => categorias[c].includes(v)) : categorias[c];
+    const usada = variables_usadas.includes(c);
+    const div = document.createElement("div");
+    div.className = "campo" + (usada ? "" : " sin-efecto");
+    div.innerHTML = `<div class="campo-cab"><span class="nom">${NOMBRE[c]}</span>
+      <span class="nota">${usada ? "" : "no influye en el modelo"}</span></div><div class="pills" role="group" aria-label="${NOMBRE[c]}"></div>`;
+    const grupo = div.querySelector(".pills");
+    for (const v of [...niveles, null]) {
+      const b = document.createElement("button");
+      b.type = "button"; b.className = "pill";
+      b.innerHTML = v === null ? "Sin dato" : `${ICONO[v] ? `<span class="ic" aria-hidden="true">${ICONO[v]}</span>` : ""}${es(v)}`;
+      b.setAttribute("aria-pressed", String(estado.pedido[c] === v));
+      b.addEventListener("click", () => {
+        estado.pedido[c] = v;
+        grupo.querySelectorAll(".pill").forEach((p) => p.setAttribute("aria-pressed", "false"));
+        b.setAttribute("aria-pressed", "true");
+        programarPrediccion();
+      });
+      grupo.appendChild(b);
+    }
+    cont.appendChild(div);
+  }
+}
+
+let temporizador, ultimaRespuesta, ultimaSens;
+function programarPrediccion() { clearTimeout(temporizador); temporizador = setTimeout(predecirUno, 180); }
+
+async function predecirUno() {
+  const p = estado.pedido;
+  try {
+    const res = await api("/predict", p);
+    ultimaRespuesta = res;
+    animarHero(res.tiempo_estimado_min);
+    $("#hero-rango").textContent =
+      `Entre ${fmt(res.limite_inferior_min)} y ${fmt(res.limite_superior_min)} min, con ${Math.round(res.nivel_intervalo * 100)}% de confianza`;
+    dibujarPista(res);
+    $("#alertas-uno").innerHTML = res.alertas.length
+      ? `<div class="alertas"><span class="icono-aviso">!</span><b>Ten en cuenta</b><ul>${res.alertas.map((a) => `<li>${esc(traducirAlerta(a))}</li>`).join("")}</ul></div>` : "";
+    $("#sub-contrib").textContent = `El modelo parte de una base de ${fmt(res.base_min)} min y cada factor suma o resta minutos.`;
+    dibujarContrib(res);
+    await sensibilidad();
+  } catch (e) {
+    $("#hero-num").innerHTML = `–<small>min</small>`;
+    $("#hero-rango").innerHTML = `<span class="error">${esc(e.message)}</span>`;
+  }
+}
+function traducirAlerta(a) {
+  let t = a;
+  for (const [k, v] of Object.entries(NOMBRE)) t = t.replace(k, v);
+  return t.replace("imputada", "sin dato: se usó el valor típico").replace("fuera de rango", "fuera del rango de entrenamiento");
+}
+function animarHero(destino) {
+  const desde = estado.heroValor, t0 = performance.now(), dur = 550;
+  estado.heroValor = destino;
+  const paso = (t) => {
+    const k = Math.min(1, (t - t0) / dur), e = 1 - (1 - k) ** 3;
+    $("#hero-num").innerHTML = `${fmt(desde + (destino - desde) * e)}<small>min</small>`;
+    if (k < 1) requestAnimationFrame(paso);
+  };
+  requestAnimationFrame(paso);
+}
+
+/* ---------- Pista de entrega (intervalo + moto) ---------- */
+function dibujarPista(res) {
+  const cont = $("#viz-pista");
+  const alto = 92;
+  let s = cont.querySelector("svg");
+  const ancho = Math.max(280, cont.clientWidth);
+  const maxT = Math.max(120, Math.ceil(res.limite_superior_min / 30) * 30);
+  const x = escala(0, maxT, 14, ancho - 14);
+  const yPista = 46;
+  if (!s || +s.dataset.ancho !== ancho || +s.dataset.max !== maxT) {
+    cont.innerHTML = "";
+    s = svg("svg", { viewBox: `0 0 ${ancho} ${alto}`, height: alto, role: "img" }, cont);
+    s.dataset.ancho = ancho; s.dataset.max = maxT;
+    svg("rect", { x: x(0), y: yPista - 5, width: x(maxT) - x(0), height: 10, rx: 5, style: "fill:var(--track)" }, s);
+    svg("rect", { class: "banda", x: x(0), y: yPista - 5, width: 0, height: 10, rx: 5, style: "fill:var(--band)" }, s);
+    for (const t of marcas(0, maxT, 4)) {
+      svg("line", { x1: x(t), x2: x(t), y1: yPista + 9, y2: yPista + 13, style: "stroke:var(--axis)" }, s);
+      svg("text", { x: x(t), y: yPista + 28, "text-anchor": "middle", text: `${t} min` }, s);
+    }
+    const g = svg("g", { class: "moto", style: `transform: translateX(${x(0)}px)` }, s);
+    svg("circle", { cx: 0, cy: yPista - 22, r: 17, style: "fill:var(--s1);stroke:var(--surface);stroke-width:2" }, g);
+    svg("text", { x: 0, y: yPista - 16, "text-anchor": "middle", style: "font-size:17px", text: "🛵" }, g);
+    svg("path", { d: `M-6,${yPista - 6} L6,${yPista - 6} L0,${yPista} Z`, style: "fill:var(--s1)" }, g);
+    s.addEventListener("mousemove", (ev) => {
+      const r = ultimaRespuesta; if (!r) return;
+      mostrarTT(`<b>${fmt(r.tiempo_estimado_min)} min</b> estimados<br>Intervalo ${Math.round(r.nivel_intervalo * 100)}%: ${fmt(r.limite_inferior_min)} – ${fmt(r.limite_superior_min)} min`, ev);
+    });
+    s.addEventListener("mouseleave", ocultarTT);
+  }
+  const banda = s.querySelector(".banda");
+  requestAnimationFrame(() => {
+    banda.setAttribute("x", x(res.limite_inferior_min));
+    banda.setAttribute("width", Math.max(0, x(res.limite_superior_min) - x(res.limite_inferior_min)));
+    s.querySelector(".moto").style.transform = `translateX(${x(res.tiempo_estimado_min)}px)`;
+  });
+  s.setAttribute("aria-label", `Tiempo estimado ${fmt(res.tiempo_estimado_min)} minutos, intervalo de ${fmt(res.limite_inferior_min)} a ${fmt(res.limite_superior_min)}`);
+}
+
+/* ---------- Contribuciones (barras divergentes) ---------- */
+function etiquetaValor(c) {
+  if (NUMERICAS.includes(c.variable)) return `${c.valor} ${UNIDAD[c.variable]}`;
+  return es(c.valor);
+}
+function dibujarContrib(res) {
+  const filas = [...res.contribuciones].sort((a, b) => Math.abs(b.minutos) - Math.abs(a.minutos));
+  const fila = 38, h = 18, margenIzq = 150;
+  const { s, ancho } = lienzo($("#viz-contrib"), filas.length * fila + 8);
+  const min = Math.min(0, ...filas.map((f) => f.minutos)), max = Math.max(0, ...filas.map((f) => f.minutos));
+  const x = escala(min, max, margenIzq + (min < 0 ? 64 : 4), ancho - (max > 0 ? 64 : 4));
+  svg("line", { x1: x(0), x2: x(0), y1: 0, y2: filas.length * fila, style: "stroke:var(--axis)" }, s);
+  filas.forEach((f, i) => {
+    const y = i * fila + (fila - h) / 2;
+    const g = svg("g", {}, s);
+    svg("rect", { x: 0, y: i * fila, width: ancho, height: fila, style: "fill:transparent" }, g);
+    svg("text", { x: 0, y: y + h / 2 + 4, class: "t-ink", style: "font-weight:600", text: NOMBRE[f.variable] }, g);
+    svg("text", { x: 92, y: y + h / 2 + 4, class: "t-ink2", text: etiquetaValor(f) }, g);
+    const color = f.minutos >= 0 ? "var(--plus)" : "var(--minus)";
+    const d = barraH(x(0), x(f.minutos), y, h);
+    if (d) svg("path", { d, style: `fill:${color}` }, g);
+    const signo = f.minutos > 0 ? "+" : f.minutos < 0 ? "−" : "";
+    const txt = f.minutos === 0 ? "0 (referencia)" : `${signo}${fmt(Math.abs(f.minutos))} min`;
+    svg("text", { x: f.minutos >= 0 ? x(f.minutos) + 6 : x(f.minutos) - 6, y: y + h / 2 + 4,
+      "text-anchor": f.minutos >= 0 ? "start" : "end", class: "t-ink", text: txt }, g);
+    g.addEventListener("mousemove", (ev) => mostrarTT(
+      `<b>${NOMBRE[f.variable]}: ${esc(etiquetaValor(f))}</b><br>${f.minutos === 0 ? "Categoría de referencia: no suma ni resta" : `${f.minutos > 0 ? "Suma" : "Resta"} ${fmt(Math.abs(f.minutos))} min`}`, ev));
+    g.addEventListener("mouseleave", ocultarTT);
+  });
+  s.setAttribute("aria-label", "Contribución de cada factor: " + filas.map((f) => `${NOMBRE[f.variable]} ${fmt(f.minutos)} min`).join(", "));
+}
+
+/* ---------- Sensibilidad: tiempo vs distancia por tráfico ---------- */
+async function sensibilidad() {
+  const { categorias } = estado.opciones;
+  const niveles = ORDEN.Traffic_Level.filter((v) => categorias.Traffic_Level.includes(v));
+  const dActual = estado.pedido.Distance_km ?? 0;
+  const dMax = Math.max(20, Math.ceil(dActual));
+  const xs = Array.from({ length: 21 }, (_, i) => +(dMax * i / 20).toFixed(2));
+  const lote = [];
+  for (const nv of niveles) for (const d of xs) lote.push({ ...estado.pedido, Distance_km: d, Traffic_Level: nv });
+  const res = await api("/predict/batch", lote);
+  const series = niveles.map((nv, k) => ({ nivel: nv, pts: xs.map((d, i) => ({ x: d, y: res[k * xs.length + i].tiempo_estimado_min })) }));
+  ultimaSens = { series, dActual };
+  dibujarSens();
+}
+function dibujarSens() {
+  if (!ultimaSens) return;
+  const { series, dActual } = ultimaSens;
+  $("#ley-sens").innerHTML = series.map((s) => `<span><i class="linea" style="background:${COLOR_TRAFICO[s.nivel]}"></i>Tráfico ${es(s.nivel).toLowerCase()}</span>`).join("");
+  const alto = 300, m = { t: 12, r: 92, b: 34, l: 44 };
+  const { s, ancho } = lienzo($("#viz-sens"), alto);
+  const todos = series.flatMap((se) => se.pts);
+  const xMax = todos.at(-1).x;
+  const yMax = Math.max(...todos.map((p) => p.y)) * 1.05;
+  const x = escala(0, xMax, m.l, ancho - m.r), y = escala(0, yMax, alto - m.b, m.t);
+  for (const t of marcas(0, yMax, 5)) {
+    svg("line", { x1: m.l, x2: ancho - m.r, y1: y(t), y2: y(t), style: "stroke:var(--grid)" }, s);
+    svg("text", { x: m.l - 8, y: y(t) + 4, "text-anchor": "end", text: t }, s);
+  }
+  const nTicksX = Math.max(2, Math.min(10, Math.floor((ancho - m.l - m.r) / 64)));
+  for (const t of marcas(0, xMax, nTicksX)) svg("text", { x: x(t), y: alto - m.b + 18, "text-anchor": "middle", text: `${t} km` }, s);
+  svg("line", { x1: m.l, x2: ancho - m.r, y1: y(0), y2: y(0), style: "stroke:var(--axis)" }, s);
+  svg("text", { x: m.l - 8, y: m.t - 2, "text-anchor": "end", text: "min" }, s);
+  // Marca de la distancia actual
+  if (dActual <= xMax) {
+    svg("line", { x1: x(dActual), x2: x(dActual), y1: m.t, y2: alto - m.b, style: "stroke:var(--ink-2);stroke-dasharray:0;opacity:.35" }, s);
+    svg("text", { x: x(dActual), y: m.t + 10, "text-anchor": "middle", class: "t-ink2", text: "tu pedido" }, s);
+  }
+  const gLineas = svg("g", {}, s);
+  for (const se of series) {
+    const d = se.pts.map((p, i) => `${i ? "L" : "M"}${x(p.x)},${y(p.y)}`).join(" ");
+    svg("path", { d, style: `fill:none;stroke:${COLOR_TRAFICO[se.nivel]};stroke-width:2;stroke-linejoin:round;stroke-linecap:round` }, gLineas);
+    const fin = se.pts.at(-1);
+    svg("circle", { cx: x(fin.x), cy: y(fin.y), r: 4, style: `fill:${COLOR_TRAFICO[se.nivel]};stroke:var(--surface);stroke-width:2` }, gLineas);
+    svg("text", { x: x(fin.x) + 9, y: y(fin.y) + 4, class: "t-ink2", text: `${es(se.nivel)} · ${Math.round(fin.y)}` }, gLineas);
+  }
+  // Punto del pedido actual sobre su línea de tráfico
+  const actual = series.find((se) => se.nivel === estado.pedido.Traffic_Level);
+  if (actual && ultimaRespuesta && dActual <= xMax) {
+    svg("circle", { cx: x(dActual), cy: y(ultimaRespuesta.tiempo_estimado_min), r: 6,
+      style: `fill:${COLOR_TRAFICO[actual.nivel]};stroke:var(--surface);stroke-width:2` }, s);
+  }
+  // Capa de hover: cruz + tooltip con los tres niveles
+  const guia = svg("line", { y1: m.t, y2: alto - m.b, style: "stroke:var(--axis);opacity:0" }, s);
+  const puntos = series.map((se) => svg("circle", { r: 4.5, style: `fill:${COLOR_TRAFICO[se.nivel]};stroke:var(--surface);stroke-width:2;opacity:0` }, s));
+  const zona = svg("rect", { x: m.l, y: m.t, width: ancho - m.l - m.r, height: alto - m.t - m.b, style: "fill:transparent" }, s);
+  zona.addEventListener("mousemove", (ev) => {
+    const caja = s.getBoundingClientRect();
+    const px = (ev.clientX - caja.left) * (ancho / caja.width);
+    const i = Math.max(0, Math.min(series[0].pts.length - 1, Math.round((x.inv(px) / xMax) * (series[0].pts.length - 1))));
+    const xv = series[0].pts[i].x;
+    guia.setAttribute("x1", x(xv)); guia.setAttribute("x2", x(xv)); guia.style.opacity = 1;
+    series.forEach((se, k) => { puntos[k].setAttribute("cx", x(xv)); puntos[k].setAttribute("cy", y(se.pts[i].y)); puntos[k].style.opacity = 1; });
+    mostrarTT(`<b>${fmt(xv)} km</b>` + [...series].sort((a, b) => b.pts[i].y - a.pts[i].y).map((se) =>
+      `<div class="fila-tt"><span class="sw" style="background:${COLOR_TRAFICO[se.nivel]}"></span>Tráfico ${es(se.nivel).toLowerCase()}: <b>${fmt(se.pts[i].y)} min</b></div>`).join(""), ev);
+  });
+  zona.addEventListener("mouseleave", () => { guia.style.opacity = 0; puntos.forEach((p) => (p.style.opacity = 0)); ocultarTT(); });
+  s.setAttribute("aria-label", "Tiempo estimado según la distancia para tráfico bajo, medio y alto");
+}
+
+/* =========================================================
+   VARIOS PEDIDOS
+   ========================================================= */
+let contadorId = 1;
+const nuevaFila = (datos = {}) => ({ id: datos.id ?? `P-${String(contadorId++).padStart(3, "0")}`,
+  ...Object.fromEntries(CAMPOS.map((c) => [c, datos[c] ?? null])), real: datos.real ?? null });
+
+const MAX_FILAS_EDITABLES = 100;
+function dibujarTablaEntrada() {
+  const t = $("#tabla-entrada");
+  const { categorias } = estado.opciones;
+  const hayReal = estado.filas.some((f) => f.real != null);
+  if (!estado.filas.length) {
+    t.innerHTML = `<tr><td class="vacio">Aún no hay pedidos. Agrega filas, genera algunos al azar o sube un CSV.</td></tr>`;
+    $("#estado-lote").textContent = "";
+    return;
+  }
+  const visibles = estado.filas.slice(0, MAX_FILAS_EDITABLES);
+  t.innerHTML = `<thead><tr><th>id</th>${CAMPOS.map((c) => `<th>${NOMBRE[c]}${UNIDAD[c] ? ` (${UNIDAD[c]})` : ""}</th>`).join("")}
+    ${hayReal ? "<th class='num'>Real (min)</th>" : ""}<th></th></tr></thead><tbody>${visibles.map((f, i) => `
+    <tr data-i="${i}">
+      <td class="celda"><input class="id" data-c="id" value="${esc(f.id)}" aria-label="id"></td>
+      ${NUMERICAS.map((c) => `<td class="celda"><input type="number" min="0" step="${PASO[c]}" data-c="${c}" value="${f[c] ?? ""}" aria-label="${NOMBRE[c]}"></td>`).join("")}
+      ${CATEGORICAS.map((c) => {
+        const opciones = ORDEN[c] ? ORDEN[c].filter((v) => categorias[c].includes(v)) : categorias[c];
+        const extra = f[c] != null && !opciones.includes(f[c]) ? [f[c]] : [];
+        return `<td class="celda"><select data-c="${c}" aria-label="${NOMBRE[c]}"><option value="">—</option>${[...opciones, ...extra].map((v) =>
+          `<option value="${esc(v)}" ${f[c] === v ? "selected" : ""}>${esc(es(v))}${extra.includes(v) ? " (nueva)" : ""}</option>`).join("")}</select></td>`;
+      }).join("")}
+      ${hayReal ? `<td class="num">${f.real ?? ""}</td>` : ""}
+      <td><button class="mini" data-acc="dup" title="Duplicar" aria-label="Duplicar fila">⧉</button><button class="mini" data-acc="del" title="Eliminar" aria-label="Eliminar fila">✕</button></td>
+    </tr>`).join("")}</tbody>`;
+  $("#estado-lote").textContent = estado.filas.length > MAX_FILAS_EDITABLES
+    ? `${estado.filas.length} pedidos cargados · se muestran los primeros ${MAX_FILAS_EDITABLES} para editar; se estiman todos.`
+    : `${estado.filas.length} pedido${estado.filas.length === 1 ? "" : "s"}`;
+}
+$("#tabla-entrada").addEventListener("input", (ev) => {
+  const el = ev.target, tr = el.closest("tr[data-i]"); if (!tr) return;
+  const f = estado.filas[+tr.dataset.i], c = el.dataset.c;
+  f[c] = el.value === "" ? null : NUMERICAS.includes(c) ? +el.value : el.value;
+});
+$("#tabla-entrada").addEventListener("click", (ev) => {
+  const b = ev.target.closest("button[data-acc]"); if (!b) return;
+  const i = +b.closest("tr").dataset.i;
+  if (b.dataset.acc === "del") estado.filas.splice(i, 1);
+  else estado.filas.splice(i + 1, 0, nuevaFila({ ...estado.filas[i], id: undefined }));
+  dibujarTablaEntrada();
+});
+$("#b-agregar").addEventListener("click", () => { estado.filas.push(nuevaFila(INICIAL)); dibujarTablaEntrada(); });
+$("#b-limpiar").addEventListener("click", () => { estado.filas = []; estado.resultados = []; contadorId = 1; dibujarTablaEntrada(); $("#res-lote").innerHTML = ""; });
+$("#b-aleatorios").addEventListener("click", () => {
+  const { categorias, rangos } = estado.opciones;
+  const azar = (a, b, paso) => Math.round((a + Math.random() * (b - a)) / paso) * paso;
+  for (let k = 0; k < 5; k++) {
+    const d = {};
+    for (const c of NUMERICAS) d[c] = +azar(rangos[c][0], rangos[c][1], PASO[c]).toFixed(2);
+    for (const c of CATEGORICAS) d[c] = categorias[c][Math.floor(Math.random() * categorias[c].length)];
+    estado.filas.push(nuevaFila(d));
+  }
+  dibujarTablaEntrada();
+});
+$("#b-plantilla").addEventListener("click", () => {
+  const filas = [["id", ...CAMPOS], ["P-001", 7.5, 15, 3, "Rainy", "High", "Evening", "Bike"],
+    ["P-002", 2.1, 10, "", "Clear", "Low", "Morning", "Scooter"], ["P-003", 14.8, 22, 6, "Snowy", "Medium", "Night", "Car"]];
+  descargar("plantilla_pedidos.csv", filas.map((f) => f.join(",")).join("\n"));
+});
+
+/* ---------- Carga de CSV ---------- */
+function parsearCSV(texto) {
+  texto = texto.replace(/^﻿/, "");
+  const primera = texto.split(/\r?\n/, 1)[0];
+  const sep = (primera.match(/;/g) || []).length > (primera.match(/,/g) || []).length ? ";" : ",";
+  const filas = []; let fila = [], campo = "", comillas = false;
+  for (let i = 0; i < texto.length; i++) {
+    const ch = texto[i];
+    if (comillas) {
+      if (ch === '"' && texto[i + 1] === '"') { campo += '"'; i++; }
+      else if (ch === '"') comillas = false; else campo += ch;
+    } else if (ch === '"') comillas = true;
+    else if (ch === sep) { fila.push(campo); campo = ""; }
+    else if (ch === "\n" || ch === "\r") {
+      if (ch === "\r" && texto[i + 1] === "\n") i++;
+      fila.push(campo); campo = ""; if (fila.some((v) => v.trim() !== "")) filas.push(fila); fila = [];
+    } else campo += ch;
+  }
+  fila.push(campo); if (fila.some((v) => v.trim() !== "")) filas.push(fila);
+  return { filas, sep };
+}
+function cargarCSV(texto) {
+  const { filas, sep } = parsearCSV(texto);
+  if (filas.length < 2) throw new Error("El archivo no tiene filas de datos.");
+  const cab = filas[0].map((h) => h.trim().toLowerCase());
+  const mapa = {};
+  cab.forEach((h, i) => {
+    if (h === "id" || h === "order_id") mapa.id = i;
+    else if (h === "delivery_time_min") mapa.real = i;
+    else { const c = CAMPOS.find((c) => c.toLowerCase() === h); if (c) mapa[c] = i; }
+  });
+  const faltan = CAMPOS.filter((c) => !(c in mapa));
+  if (faltan.length === CAMPOS.length) throw new Error("No se reconoce ninguna columna. Descarga la plantilla para ver el formato.");
+  const num = (v) => { if (v == null || v.trim() === "") return null; const n = +(sep === ";" ? v.replace(",", ".") : v); return Number.isFinite(n) ? n : null; };
+  const nuevas = filas.slice(1).map((f) => {
+    const d = {};
+    for (const c of NUMERICAS) d[c] = c in mapa ? num(f[mapa[c]]) : null;
+    for (const c of CATEGORICAS) d[c] = c in mapa && f[mapa[c]]?.trim() ? f[mapa[c]].trim() : null;
+    if ("id" in mapa && f[mapa.id]?.trim()) d.id = f[mapa.id].trim();
+    if ("real" in mapa) d.real = num(f[mapa.real]);
+    return nuevaFila(d);
+  });
+  estado.filas.push(...nuevas);
+  dibujarTablaEntrada();
+  $("#estado-lote").textContent = `Se cargaron ${nuevas.length} pedidos` + (faltan.length ? ` · columnas no encontradas (se imputarán): ${faltan.map((c) => NOMBRE[c]).join(", ")}` : "");
+}
+const zonaSoltar = $("#soltar"), inputArchivo = $("#archivo");
+inputArchivo.addEventListener("change", () => leerArchivo(inputArchivo.files[0]));
+["dragenter", "dragover"].forEach((t) => zonaSoltar.addEventListener(t, (e) => { e.preventDefault(); zonaSoltar.classList.add("encima"); }));
+["dragleave", "drop"].forEach((t) => zonaSoltar.addEventListener(t, (e) => { e.preventDefault(); zonaSoltar.classList.remove("encima"); }));
+zonaSoltar.addEventListener("drop", (e) => leerArchivo(e.dataTransfer.files[0]));
+function leerArchivo(archivo) {
+  if (!archivo) return;
+  const lector = new FileReader();
+  lector.onload = () => {
+    try { cargarCSV(lector.result); } catch (err) { $("#estado-lote").innerHTML = `<span class="error">${esc(err.message)}</span>`; }
+    inputArchivo.value = "";
+  };
+  lector.readAsText(archivo);
+}
+
+/* ---------- Estimar lote ---------- */
+$("#b-estimar").addEventListener("click", async () => {
+  if (!estado.filas.length) { $("#estado-lote").textContent = "Agrega al menos un pedido."; return; }
+  const b = $("#b-estimar"); b.disabled = true; b.textContent = "Estimando…";
+  try {
+    const cuerpo = estado.filas.map((f) => ({ id: String(f.id), ...Object.fromEntries(CAMPOS.map((c) => [c, f[c]])) }));
+    const res = await api("/predict/batch", cuerpo);
+    estado.resultados = res.map((r, i) => ({ ...r, entrada: estado.filas[i], real: estado.filas[i].real }));
+    dibujarResultadosLote();
+    $("#res-lote").scrollIntoView({ behavior: "smooth", block: "start" });
+  } catch (e) {
+    $("#estado-lote").innerHTML = `<span class="error">No se pudo estimar: ${esc(e.message)}</span>`;
+  } finally { b.disabled = false; b.textContent = "Estimar todos"; }
+});
+
+function dibujarResultadosLote() {
+  const R = estado.resultados; if (!R.length) return;
+  const t = R.map((r) => r.tiempo_estimado_min);
+  const prom = t.reduce((a, b) => a + b, 0) / t.length;
+  const rapido = R.reduce((a, b) => (b.tiempo_estimado_min < a.tiempo_estimado_min ? b : a));
+  const lento = R.reduce((a, b) => (b.tiempo_estimado_min > a.tiempo_estimado_min ? b : a));
+  const conAlertas = R.filter((r) => r.alertas.length).length;
+  const conReal = R.filter((r) => r.real != null);
+  const mae = conReal.length ? conReal.reduce((a, r) => a + Math.abs(r.real - r.tiempo_estimado_min), 0) / conReal.length : null;
+
+  $("#res-lote").innerHTML = `
+    <div class="tiles">
+      <div class="tile"><p class="lab">Pedidos estimados</p><p class="val">${R.length.toLocaleString("es")}</p></div>
+      <div class="tile"><p class="lab">Tiempo promedio</p><p class="val">${fmt(prom)} min</p></div>
+      <div class="tile"><p class="lab">Más rápido</p><p class="val">${fmt(rapido.tiempo_estimado_min)} min</p><p class="det">${esc(rapido.id)}</p></div>
+      <div class="tile"><p class="lab">Más lento</p><p class="val">${fmt(lento.tiempo_estimado_min)} min</p><p class="det">${esc(lento.id)}</p></div>
+      <div class="tile"><p class="lab"><span class="icono-aviso">!</span>Con alertas</p><p class="val">${conAlertas}</p><p class="det">datos imputados o fuera de rango</p></div>
+      ${mae != null ? `<div class="tile"><p class="lab">Error medio vs. real</p><p class="val">${fmt(mae)} min</p><p class="det">${conReal.length} pedidos con tiempo real</p></div>` : ""}
+    </div>
+    <div class="grid-dos">
+      <div class="card"><h2>Distribución de los tiempos estimados</h2><p class="sub">Cantidad de pedidos por rango de minutos.</p><div class="viz" id="viz-hist"></div></div>
+      ${mae != null
+        ? `<div class="card"><h2>Estimado vs. real</h2><p class="sub">Cada punto es un pedido; la diagonal es la predicción perfecta.</p><div class="viz" id="viz-disp"></div></div>`
+        : `<div class="card"><h2>Pedidos más demorados</h2><p class="sub">Tiempo estimado e intervalo del 90%.</p><div class="viz" id="viz-int"></div></div>`}
+    </div>
+    ${mae != null ? `<div class="card" style="margin-bottom:20px"><h2>Pedidos más demorados</h2><p class="sub">Tiempo estimado e intervalo del 90%.</p><div class="viz" id="viz-int"></div></div>` : ""}
+    <div class="card">
+      <div class="barra" style="justify-content:space-between;margin-bottom:12px">
+        <div><h2>Resultados</h2><p class="sub" style="margin:0">${R.length > 200 ? `Se muestran 200 de ${R.length}; descarga el CSV para verlos todos.` : "Todos los pedidos estimados."}</p></div>
+        <button class="btn primario" id="b-descargar" type="button">⬇ Descargar resultados</button>
+      </div>
+      <div class="tabla-wrap" style="max-height:460px"><table id="tabla-res"></table></div>
+    </div>`;
+  dibujarHist();
+  dibujarIntervalos();
+  if (mae != null) dibujarDispersion();
+  dibujarTablaRes();
+  $("#b-descargar").addEventListener("click", descargarResultados);
+}
+
+function dibujarHist() {
+  const cont = $("#viz-hist"); if (!cont) return;
+  const t = estado.resultados.map((r) => r.tiempo_estimado_min);
+  const lo = Math.min(...t), hi = Math.max(...t);
+  const bordes = marcas(Math.floor(lo), Math.ceil(hi) + 1e-6, Math.min(14, Math.max(4, Math.ceil(Math.sqrt(t.length)))));
+  if (bordes[0] > lo) bordes.unshift(bordes[0] - (bordes[1] - bordes[0]));
+  while (bordes.at(-1) <= hi) bordes.push(bordes.at(-1) + (bordes[1] - bordes[0]));
+  const cuentas = bordes.slice(0, -1).map((b, i) => t.filter((v) => v >= b && v < bordes[i + 1]).length);
+  const alto = 260, m = { t: 14, r: 8, b: 30, l: 36 };
+  const { s, ancho } = lienzo(cont, alto);
+  const x = escala(bordes[0], bordes.at(-1), m.l, ancho - m.r);
+  const yMax = Math.max(...cuentas) * 1.1;
+  const y = escala(0, yMax, alto - m.b, m.t);
+  for (const v of marcas(0, yMax, 4)) {
+    svg("line", { x1: m.l, x2: ancho - m.r, y1: y(v), y2: y(v), style: "stroke:var(--grid)" }, s);
+    svg("text", { x: m.l - 6, y: y(v) + 4, "text-anchor": "end", text: v }, s);
+  }
+  const paso = Math.max(1, Math.ceil(bordes.length / Math.max(2, Math.floor((ancho - m.l - m.r) / 52))));
+  bordes.forEach((b, i) => { if (i % paso === 0) svg("text", { x: x(b), y: alto - m.b + 18, "text-anchor": "middle", text: b }, s); });
+  svg("text", { x: ancho - m.r, y: alto - 2, "text-anchor": "end", text: "min" }, s);
+  cuentas.forEach((n, i) => {
+    const x0 = x(bordes[i]) + 1, x1 = x(bordes[i + 1]) - 1;
+    const g = svg("g", {}, s);
+    svg("rect", { x: x0, y: m.t, width: x1 - x0, height: alto - m.t - m.b, style: "fill:transparent" }, g);
+    const d = columna(x0, x1 - x0, y(0), y(n));
+    if (d) svg("path", { d, style: "fill:var(--s1)" }, g);
+    g.addEventListener("mousemove", (ev) => mostrarTT(`<b>${bordes[i]} – ${bordes[i + 1]} min</b><br>${n} pedido${n === 1 ? "" : "s"}`, ev));
+    g.addEventListener("mouseleave", ocultarTT);
+  });
+  svg("line", { x1: m.l, x2: ancho - m.r, y1: y(0), y2: y(0), style: "stroke:var(--axis)" }, s);
+  s.setAttribute("aria-label", "Histograma de tiempos estimados");
+}
+
+function dibujarIntervalos() {
+  const cont = $("#viz-int"); if (!cont) return;
+  const MAX = 25;
+  const R = [...estado.resultados].sort((a, b) => b.tiempo_estimado_min - a.tiempo_estimado_min).slice(0, MAX);
+  const fila = 24, m = { t: 22, r: 16, l: 104 };
+  const alto = m.t + R.length * fila + 6;
+  const { s, ancho } = lienzo(cont, alto);
+  const xMax = Math.max(...R.map((r) => r.limite_superior_min)) * 1.05;
+  const xMin = Math.min(...R.map((r) => r.limite_inferior_min)) * 0.9;
+  const x = escala(xMin, xMax, m.l, ancho - m.r);
+  for (const t of marcas(xMin, xMax, 5)) {
+    svg("line", { x1: x(t), x2: x(t), y1: m.t - 4, y2: alto, style: "stroke:var(--grid)" }, s);
+    svg("text", { x: x(t), y: m.t - 8, "text-anchor": "middle", text: t }, s);
+  }
+  R.forEach((r, i) => {
+    const yc = m.t + i * fila + fila / 2;
+    const g = svg("g", {}, s);
+    const fondo = svg("rect", { x: 0, y: yc - fila / 2, width: ancho, height: fila, rx: 6, style: "fill:transparent" }, g);
+    svg("text", { x: 0, y: yc + 4, class: "t-ink2", text: (r.alertas.length ? "⚠ " : "") + String(r.id).slice(0, 13) }, g);
+    svg("line", { x1: x(r.limite_inferior_min), x2: x(r.limite_superior_min), y1: yc, y2: yc,
+      style: "stroke:var(--band);stroke-width:4;stroke-linecap:round" }, g);
+    svg("circle", { cx: x(r.tiempo_estimado_min), cy: yc, r: 5, style: "fill:var(--s1);stroke:var(--surface);stroke-width:2" }, g);
+    g.addEventListener("mousemove", (ev) => {
+      fondo.style.fill = "var(--grid)";
+      mostrarTT(`<b>${esc(r.id)}</b><br>Estimado: <b>${fmt(r.tiempo_estimado_min)} min</b><br>Intervalo: ${fmt(r.limite_inferior_min)} – ${fmt(r.limite_superior_min)} min` +
+        (r.real != null ? `<br>Real: ${fmt(r.real)} min` : "") +
+        (r.alertas.length ? `<br><span class="icono-aviso">!</span>${r.alertas.map((a) => esc(traducirAlerta(a))).join("<br>")}` : ""), ev);
+    });
+    g.addEventListener("mouseleave", () => { fondo.style.fill = "transparent"; ocultarTT(); });
+  });
+  if (estado.resultados.length > MAX) {
+    cont.insertAdjacentHTML("beforeend", `<p class="nota" style="margin:8px 0 0">Se muestran los ${MAX} más demorados de ${estado.resultados.length}.</p>`);
+  }
+  s.setAttribute("aria-label", "Pedidos más demorados con su intervalo de predicción");
+}
+
+function dibujarDispersion() {
+  const cont = $("#viz-disp"); if (!cont) return;
+  const P = estado.resultados.filter((r) => r.real != null);
+  const alto = 310, m = { t: 26, r: 12, b: 34, l: 44 };
+  const { s, ancho } = lienzo(cont, alto);
+  const lim = Math.max(...P.map((p) => Math.max(p.real, p.tiempo_estimado_min))) * 1.05;
+  const x = escala(0, lim, m.l, ancho - m.r), y = escala(0, lim, alto - m.b, m.t);
+  for (const t of marcas(0, lim, 5)) {
+    svg("line", { x1: m.l, x2: ancho - m.r, y1: y(t), y2: y(t), style: "stroke:var(--grid)" }, s);
+    svg("text", { x: m.l - 6, y: y(t) + 4, "text-anchor": "end", text: t }, s);
+  }
+  for (const t of marcas(0, lim, Math.max(2, Math.min(8, Math.floor((ancho - m.l - m.r) / 56)))))
+    svg("text", { x: x(t), y: alto - m.b + 18, "text-anchor": "middle", text: t }, s);
+  svg("text", { x: ancho - m.r, y: alto - 2, "text-anchor": "end", text: "real (min) →" }, s);
+  svg("text", { x: m.l, y: 10, "text-anchor": "start", text: "↑ estimado (min)" }, s);
+  svg("line", { x1: x(0), y1: y(0), x2: x(lim), y2: y(lim), style: "stroke:var(--axis)" }, s);
+  const g = svg("g", {}, s);
+  P.forEach((p) => {
+    const c = svg("circle", { cx: x(p.real), cy: y(p.tiempo_estimado_min), r: 4, style: "fill:var(--s1);fill-opacity:.7;stroke:var(--surface);stroke-width:1.5" }, g);
+    c.addEventListener("mousemove", (ev) => {
+      c.setAttribute("r", 6);
+      mostrarTT(`<b>${esc(p.id)}</b><br>Real: ${fmt(p.real)} min<br>Estimado: ${fmt(p.tiempo_estimado_min)} min<br>Error: ${fmt(p.real - p.tiempo_estimado_min)} min`, ev);
+    });
+    c.addEventListener("mouseleave", () => { c.setAttribute("r", 4); ocultarTT(); });
+  });
+  s.setAttribute("aria-label", "Dispersión del tiempo real frente al estimado");
+}
+
+function dibujarTablaRes() {
+  const R = estado.resultados.slice(0, 200);
+  const hayReal = R.some((r) => r.real != null);
+  $("#tabla-res").innerHTML = `<thead><tr><th>id</th><th class="num">Estimado (min)</th><th class="num">Intervalo 90%</th>
+    ${hayReal ? "<th class='num'>Real (min)</th><th class='num'>Error (min)</th>" : ""}
+    <th class="num">Distancia</th><th>Tráfico</th><th>Clima</th><th>Alertas</th></tr></thead><tbody>${R.map((r) => `
+    <tr><td>${esc(r.id)}</td><td class="num"><b>${fmt(r.tiempo_estimado_min)}</b></td>
+      <td class="num">${fmt(r.limite_inferior_min)} – ${fmt(r.limite_superior_min)}</td>
+      ${hayReal ? `<td class="num">${r.real != null ? fmt(r.real) : ""}</td><td class="num">${r.real != null ? fmt(r.real - r.tiempo_estimado_min) : ""}</td>` : ""}
+      <td class="num">${r.entrada.Distance_km ?? "—"}</td><td>${esc(es(r.entrada.Traffic_Level ?? "—"))}</td><td>${esc(es(r.entrada.Weather ?? "—"))}</td>
+      <td>${r.alertas.length ? `<span class="badge" title="${esc(r.alertas.map(traducirAlerta).join(" · "))}"><span class="icono-aviso" style="width:14px;height:14px;margin:0">!</span>${r.alertas.length}</span>` : ""}</td></tr>`).join("")}</tbody>`;
+}
+
+function descargar(nombre, texto) {
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(new Blob(["﻿" + texto], { type: "text/csv;charset=utf-8" }));
+  a.download = nombre; a.click(); URL.revokeObjectURL(a.href);
+}
+function descargarResultados() {
+  const q = (v) => { const s = String(v ?? ""); return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s; };
+  const cab = ["id", ...CAMPOS, "tiempo_estimado_min", "limite_inferior_min", "limite_superior_min", "alertas", "real_min"];
+  const filas = estado.resultados.map((r) => [r.id, ...CAMPOS.map((c) => r.entrada[c]), r.tiempo_estimado_min,
+    r.limite_inferior_min, r.limite_superior_min, r.alertas.join("; "), r.real ?? ""]);
+  descargar("tiempos_estimados.csv", [cab, ...filas].map((f) => f.map(q).join(",")).join("\n"));
+}
+
+/* =========================================================
+   Inicio
+   ========================================================= */
+document.querySelectorAll(".tab").forEach((tab) => tab.addEventListener("click", () => {
+  document.querySelectorAll(".tab").forEach((t) => t.setAttribute("aria-selected", String(t === tab)));
+  document.querySelectorAll(".panel").forEach((p) => p.classList.toggle("activo", p.id === tab.dataset.panel));
+  if (tab.dataset.panel === "p-lote") { dibujarTablaEntrada(); if (estado.resultados.length) dibujarResultadosLote(); }
+  else redibujarUno();
+}));
+$("#tema").addEventListener("click", () => {
+  const raiz = document.documentElement;
+  const oscuro = raiz.dataset.theme ? raiz.dataset.theme === "dark" : matchMedia("(prefers-color-scheme: dark)").matches;
+  raiz.dataset.theme = oscuro ? "light" : "dark";
+});
+function redibujarUno() {
+  if (!ultimaRespuesta) return;
+  dibujarPista(ultimaRespuesta); dibujarContrib(ultimaRespuesta); dibujarSens();
+}
+let tRedim;
+addEventListener("resize", () => {
+  clearTimeout(tRedim);
+  tRedim = setTimeout(() => {
+    if ($("#p-uno").classList.contains("activo")) redibujarUno();
+    else if (estado.resultados.length) { dibujarHist(); dibujarIntervalos(); dibujarDispersion(); }
+  }, 150);
+});
+
+(async function iniciar() {
+  try {
+    const [salud, opciones] = await Promise.all([api("/health"), api("/opciones")]);
+    estado.opciones = opciones;
+    const mc = salud.metricas_cv;
+    $("#chips").innerHTML = `
+      <span class="chip">Error típico <b>±${fmt(mc.MAE)} min</b></span>
+      <span class="chip">Explica el <b>${Math.round(mc.R2 * 100)}%</b> de la variación</span>
+      <span class="chip">Modelo <b>${esc(salud.version_modelo)}</b> · entrenado ${esc(salud.fecha_entrenamiento.slice(0, 10))}</span>`;
+    construirControles();
+    dibujarTablaEntrada();
+    predecirUno();
+  } catch (e) {
+    $("#chips").innerHTML = `<span class="chip">No se pudo conectar con la API: ${esc(e.message)}</span>`;
+  }
+})();
+</script>
+</body>
+</html>

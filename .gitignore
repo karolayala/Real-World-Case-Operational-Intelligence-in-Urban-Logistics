@@ -1,6 +1,14 @@
+# Entorno virtual y cachés
+env/
+.venv/
 __pycache__/
 *.pyc
 .ipynb_checkpoints/
+.pytest_cache/
+
+# Artefactos del modelo: se regeneran con `python -m model_pipeline.run_pipeline`
+# (la API también los genera al arrancar si no existen)
 artifacts/
-env/
-.venv/
+
+# Archivos temporales de Office
+~$*
