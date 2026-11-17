@@ -1,8 +1,10 @@
 # Notas de modelado
 
 **Objetivo:** predecir `Delivery_Time_min` (minutos) a partir de las características del pedido.
+
 **Análisis completo:** [`notebooks/Training.ipynb`](notebooks/Training.ipynb) (comparación de modelos) y
 [`notebooks/predictive_model.ipynb`](notebooks/predictive_model.ipynb) (modelo final).
+
 **Código de producción:** [`model_pipeline/`](model_pipeline/).
 
 ## Resumen
