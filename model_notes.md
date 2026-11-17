@@ -11,11 +11,17 @@
 
 
 **Modelo elegido**: Regresión lineal (OLS) con errores estándar robustos (HC3) 
+
 **Fórmula**: `Delivery_Time_min ~ Distance_km + Preparation_Time_min + Traffic_Level + Weather + Courier_Experience_yrs` 
+
 **Métrica de selección**: RMSE en validación cruzada de 10 folds (`RMSE_cv`) 
+
 **Métrica para comunicar**: MAE: *"el modelo se equivoca en promedio ±6,5 min"* 
+
 **Test (200 pedidos)**: MAE 6,41 · RMSE 9,99 · MAPE 10,7 % · R² 0,79 
+
 **CV con todos los datos**: MAE 6,55 · RMSE 10,59 · MAPE 10,9 % · R² 0,77 
+
 **Modelos descartados**: GLM Gamma, GAM (normal y gamma), ElasticNet, Random Forest, Gradient Boosting 
 
 ---
