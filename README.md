@@ -22,19 +22,6 @@ Delivery_Time_min ~ Distance_km + Preparation_Time_min + Traffic_Level + Weather
 
 ---
 
-## Informes
-
-| Archivo | Contenido |
-|---|---|
-| [`EDA_report.md`](EDA_report.md) | Patrones clave, datos faltantes, atípicos y supuestos |
-| [`model_notes.md`](model_notes.md) | Lógica de modelado, elección de la métrica, selección de variables y ajuste de hiperparámetros |
-| [`explainability.md`](explainability.md) | Efecto de cada variable en minutos, importancia (SHAP) y cómo se explica cada predicción |
-| [`error_insights.md`](error_insights.md) | Cuándo y por qué falla el modelo: sesgo, error por segmento y peores casos |
-| [`next_steps.md`](next_steps.md) | Cómo funciona la API (endpoints, entradas, respuestas, errores) y qué falta para producción |
-| [`strategic_reflections.md`](strategic_reflections.md) | Respuestas a las preguntas estratégicas de la prueba |
-
----
-
 ## Organización del repositorio
 
 ```
@@ -85,10 +72,6 @@ Delivery_Time_min ~ Distance_km + Preparation_Time_min + Traffic_Level + Weather
 └── artifacts/                 ← GENERADO (no se versiona): modelo .joblib + métricas .json
 ```
 
-**Flujo:** `data/` → `model_pipeline/` (entrena) → `artifacts/` (modelo guardado) → `api/` (lo sirve).
-Los notebooks documentan cómo se llegó a cada decisión. El código de producción vive en `model_pipeline/`,
-y tanto la API como el notebook `predictive_model.ipynb` importan de ahí: **una sola implementación**.
-
 ---
 
 ## Instalación
@@ -123,32 +106,11 @@ Todos los comandos se ejecutan desde la **raíz del repositorio**.
 python -m model_pipeline.run_pipeline
 ```
 
-Este comando ejecuta, en unos 7 segundos:
-
-1. **Carga y validación:** lee el CSV y verifica columnas, tipos y la variable objetivo.
-2. **Separación:** divide en train y test (80/20, semilla 17).
-3. **Selección de variables:** selección forward con validación cruzada de 10 folds; las interacciones son candidatas.
-4. **Evaluación en test:** mide MAE, RMSE, MAPE y R² con datos no vistos.
-5. **Ajuste final:** reentrena con todos los datos y guarda en `artifacts/`:
-   - `modelo_tiempo_entrega_v1.joblib`: el modelo entrenado.
-   - `metricas_v1.json`: fórmula, métricas, pasos de la selección, coeficientes con p-valores (HC3), valores de imputación y fecha.
-
-Opciones:
-
-| Opción | Efecto |
-|---|---|
-| `--sin-seleccion` | Usa los términos fijos de `config.py` (más rápido) |
-| `--criterio BIC` | Cambia el criterio de selección (`RMSE_cv`, `MAE_cv`, `MAPE_cv`, `AIC`, `BIC`) |
-| `--datos ruta.csv` | Entrena con otro archivo |
-| `--salida carpeta/` | Guarda los artefactos en otra carpeta |
-
 ### 2. Predecir un archivo desde la terminal
 
 ```bash
 python -m model_pipeline.predict pedidos.csv predicciones.csv
 ```
-
-Agrega a cada fila `prediccion_min`, `limite_inf`, `limite_sup` (intervalo del 90 %) y `alerta`.
 
 ### 3. Levantar la API y la aplicación web
 
@@ -170,20 +132,6 @@ Si `artifacts/` no existe (por ejemplo, recién clonado el repositorio), la API 
 | `GET` | `/health` | Estado del servicio, fórmula y métricas del modelo |
 | `GET` | `/opciones` | Categorías válidas y rangos de entrenamiento |
 
-La explicación detallada de cada endpoint, con ejemplos de entrada, respuesta y errores, está en [`next_steps.md`](next_steps.md).
-
-Ejemplo:
-
-```bash
-curl -X POST http://127.0.0.1:8000/predict -H "Content-Type: application/json" \
-  -d '{"Distance_km": 7.5, "Preparation_Time_min": 15, "Courier_Experience_yrs": 3,
-       "Weather": "Rainy", "Traffic_Level": "High", "Time_of_Day": "Evening", "Vehicle_Type": "Bike"}'
-```
-
-```json
-{"tiempo_estimado_min": 57.39, "limite_inferior_min": 43.86, "limite_superior_min": 72.34,
- "nivel_intervalo": 0.9, "alertas": [], "base_min": 17.49, "contribuciones": [...]}
-```
 
 ### 4. Ejecutar las pruebas
 
@@ -194,35 +142,9 @@ python -m pytest
 ### 5. Notebooks
 
 Abre los notebooks de `notebooks/` con el entorno del proyecto. Cargan los datos con rutas relativas
-(`../data/`), así que funcionan en cualquier equipo. `Training.ipynb` tarda varios minutos por la
-selección de los GAM y la validación cruzada anidada de los modelos de machine learning.
-
----
-
-## Comportamiento ante datos problemáticos
-
-| Caso | Qué hace el modelo |
-|---|---|
-| Campo vacío o `null` | Lo imputa con la mediana o la moda de entrenamiento y lo indica en `alerta` |
-| Categoría desconocida (por ejemplo, `Weather = "Hail"`) | La trata como faltante (moda) y lo indica en `alerta` |
-| Valor fuera del rango de entrenamiento (por ejemplo, 45 km) | Predice, pero marca la extrapolación en `alerta` |
-| Predicción menor a 1 minuto | La recorta a 1 minuto y lo indica en `alerta` |
-| Número negativo o texto en un campo numérico (API) | Error `422` con el detalle |
-
-Las alertas solo se generan para las variables que usa el modelo: `Time_of_Day` y `Vehicle_Type` no influyen.
-
-## Prácticas para acelerar el paso a producción
-
-- **Una sola implementación:** la lógica del modelo está en `model_pipeline/model.py` y la usan el pipeline, la API y los notebooks.
-- **Configuración centralizada** en `config.py`: rutas, variables, semillas (todas en 17), criterio de selección, umbrales.
-- **Reproducible:** semillas fijas, versiones fijas en `requirements.txt` y rutas relativas.
-- **Sin fuga de datos:** la imputación se aprende solo con train y dentro de cada fold.
-- **Artefactos versionados:** el modelo y sus métricas llevan versión (`v1`) y fecha.
-- **Pruebas automáticas:** incluyen un umbral de desempeño (RMSE < 12 min) para detectar regresiones del modelo.
-- **API con validación de entrada**, documentación automática y registro de cada predicción en el log.
+(`../data/`), así que funcionan en cualquier equipo. 
 
 ## Limitaciones
 
 - Es un prototipo: la API no tiene autenticación ni guarda las predicciones para monitorear el desempeño.
-- El modelo no conoce factores como la zona, el restaurante o la hora exacta, porque no están en los datos.
-- `.joblib` usa *pickle*: solo cargues modelos generados por este pipeline.
+
