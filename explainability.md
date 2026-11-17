@@ -1,7 +1,9 @@
 # Explicabilidad del modelo
 
 **Modelo:** regresión lineal (OLS) con errores robustos HC3.
+
 `Delivery_Time_min ~ Distance_km + Preparation_Time_min + Traffic_Level + Weather + Courier_Experience_yrs`
+
 **Análisis completo:** [`notebooks/Explicabilidad_y_errores.ipynb`](notebooks/Explicabilidad_y_errores.ipynb) (Parte 1).
 
 ---
